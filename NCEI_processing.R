@@ -1,11 +1,12 @@
-setwd("~/FIRO AR/Risk Communication/Compounding Hazards")
+## NCEI data processing
+## Nov 28 2023
 
 # install libraries
 library(lubridate)
 library(tidyverse)
 library(readxl)
 
-## download data
+## load data
 ## Consumer Price Index CPI data (accessed from GIT repository)
 cpi <- read_excel("CPI_1996_2022_BLS.xlsx", skip = 10)
 
