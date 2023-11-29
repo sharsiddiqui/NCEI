@@ -68,3 +68,7 @@ data <- data %>%
   mutate(sum_damage_property_episode = sum(damage_property_adj2022,na.rm=T),
          sum_damage_crop_episode = sum(damage_crop_adj2022,na.rm=T)) %>%
   ungroup()
+
+##### SHAR SAN BERNARDINO             ########
+## county level analysis for San Bernardino
+sanbern <- data[data$CZ_NAME == 'SAN BERNARDINO',]
