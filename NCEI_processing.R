@@ -71,5 +71,55 @@ data <- data %>%
   ungroup()
 
 ################ SHAR SAN BERNARDINO #########################
-## county level analysis for San Bernardino
+## county level analysis
+## NOTE: for a specific county, it is important to rerun the total sums of losses again
+## otherwise those numbers would reflect all counties across the US, this is done right after
+## filtering for the county
 sanbern <- data[data$CZ_NAME == 'SAN BERNARDINO',]
+
+sanbern <- sanbern %>%
+  group_by(start_year) %>%
+  mutate(sum_damage_property_annual = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_annual = sum(damage_crop_adj2022,na.rm=T)) %>%
+  ungroup() %>%
+  group_by(EPISODE_ID) %>%
+  mutate(sum_damage_property_episode = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_episode = sum(damage_crop_adj2022,na.rm=T)) %>%
+  ungroup()
+
+
+sanbern %>%
+  mutate(t_events = nrow(.), ## total events
+  t_episodes = length(unique(EPISODE_ID))) ## total episodes
+  
+## MEAN NUMBER OF EVENTS PER YEAR
+sanbern %>% group_by(start_year) %>%
+  summarise(x = length(unique(EVENT_ID))) %>%
+  ungroup() %>%
+  summarise(mean(x),sd(x))
+
+## MEAN NUMBER OF EPISODES PER YEAR
+sanbern %>% group_by(start_year) %>%
+  summarise(x = length(unique(EPISODE_ID))) %>%
+  ungroup() %>%
+  summarise(mean(x),sd(x))
+
+## MEAN NUMBER OF EVENTS PER EPISODE 
+sanbern %>% group_by(EPISODE_ID) %>%
+  summarise(x = length(EVENT_ID)) %>%
+  ungroup() %>%
+  summarise(mean(x),sd(x))
+
+## visualization of hazard data
+ggplot(sanbern) +
+  geom_histogram(aes(Year),bins=26,color='black') +
+  theme_bw() + ylab('Count') 
+
+sanbern_episode <- sanbern %>% 
+  group_by(Year, EPISODE_ID) %>%
+  summarise(sum_damage_property_annual_episode = sum(sum_damage_property_annual)) %>%
+  ungroup()
+
+ggplot(sanbern_episode) +
+  geom_histogram(aes(Year),bins=26,color='black') +
+  theme_bw() + ylab('Count') 
