@@ -7,7 +7,7 @@ library(tidyverse)
 library(readxl)
 
 ################## DATA DOWNLOAD ######################
-## Consumer Price Index CPI data (accessed from GIT repository) - only needed for Shar calculations don't worry about this
+## Consumer Price Index CPI data (accessed from GIT repository)
 cpi <- read_excel("CPI_1996_2022_BLS.xlsx", skip = 10)
 
 ## NCEI data (accessed from HydroShare repository) ########
