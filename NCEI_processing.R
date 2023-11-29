@@ -110,11 +110,42 @@ sanbern %>% group_by(EPISODE_ID) %>%
   ungroup() %>%
   summarise(mean(x),sd(x))
 
+hazard_table <- as.data.frame(table(sanbern$start_year,sanbern$EVENT_TYPE))
+names(hazard_table) <- c('Year','Hazard','Count')
+hazard_table <- hazard_table %>%
+  group_by(Year) %>%
+  mutate(unique_ct = length(which(Count!=0))) %>%
+  ungroup() %>% ## these are supposed to be the same for every row, 
+  mutate(mean = mean(unique_ct),sd = sd(unique_ct))  ## calculates an overall average
+
+hazard_table_episode <- as.data.frame(table(sanbern$EPISODE_ID,sanbern$EVENT_TYPE))
+names(hazard_table_episode) <- c('EPISODE_ID','Hazard','Count')
+hazard_table_episode <- hazard_table_episode %>%
+  group_by(EPISODE_ID) %>%
+  mutate(unique_ct = length(which(Count!=0))) %>%
+  ungroup() %>% ## these are supposed to be the same for every row, 
+  mutate(mean = mean(unique_ct),sd = sd(unique_ct))  ## calculates an overall average
+
 ## visualization of hazard data
+## Event Frequency vs Year
 ggplot(sanbern) +
   geom_histogram(aes(Year),bins=26,color='black') +
   theme_bw() + ylab('Count') 
 
+##  Event Frequency vs Year by hazard type
+ggplot(sanbern[!is.na(sanbern$EVENT_TYPE),]) +
+  geom_histogram(aes(Year),bins=26,color='black') +
+  #geom_point(aes(Year,sum_damage_property_annual/1e7),color='black') +
+  facet_wrap(~EVENT_TYPE)+
+  theme_bw() + ylab('Count') 
+
+## Event-scale Losses by Year by Hazard type
+ggplot(sanbern[!is.na(sanbern$EVENT_TYPE),]) +
+  geom_point(aes(Year,damage_property_adj2022),color='black') +
+  facet_wrap(~EVENT_TYPE)+
+  theme_bw() + ylab('Count') 
+
+## Episode Frequency vs Year
 sanbern_episode <- sanbern %>% 
   group_by(Year, EPISODE_ID) %>%
   summarise(sum_damage_property_annual_episode = sum(sum_damage_property_annual)) %>%
