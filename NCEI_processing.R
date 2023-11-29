@@ -57,17 +57,14 @@ names(data)[45] <- 'CPI_y'
 data$damage_property_adj2022 <- data$damage_property_numeric * (292.655/data$CPI_y) ## these values seem to check out given the CPI went up 87% over this time period
 data$damage_crop_adj2022 <- data$damage_crop_numeric * (292.655/data$CPI_y)
 
-## calculate sum of losses - still working on this
-## by year, episode, and event (original dataset has virtually all unique event ids
-## some lost uniqueness because the same event was listed more than once a day)
-data_year_summary <- data %>%
+## calculate sum of losses
+## by year, episode, and event (original dataset has virtually all unique event ids)
+data <- data %>%
   group_by(start_year) %>%
-  summarise(sum_property = sum(damage_property_adj2022),
-            sum_crop = sum(damage_crop_adj2022)) %>%
-  ungroup()
-
-data_episode_summary <- data %>%
+  mutate(sum_damage_property_annual = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_annual = sum(damage_crop_adj2022,na.rm=T)) %>%
+  ungroup() %>%
   group_by(EPISODE_ID) %>%
-  summarise(sum_property = sum(damage_property_adj2022,na.rm=T),
-            sum_crop = sum(damage_crop_adj2022,na.rm=T)) %>%
+  mutate(sum_damage_property_episode = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_episode = sum(damage_crop_adj2022,na.rm=T)) %>%
   ungroup()
