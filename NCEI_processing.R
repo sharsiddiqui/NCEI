@@ -1,16 +1,16 @@
 ## NCEI data processing
 ## Nov 28 2023
 
-# install libraries
+## install libraries #####
 library(lubridate)
 library(tidyverse)
 library(readxl)
 
-## load data
-## Consumer Price Index CPI data (accessed from GIT repository)
+################## DATA DOWNLOAD ######################
+## Consumer Price Index CPI data (accessed from GIT repository) - only needed for Shar calculations don't worry about this
 cpi <- read_excel("CPI_1996_2022_BLS.xlsx", skip = 10)
 
-## NCEI data (accessed from HydroShare repository)
+## NCEI data (accessed from HydroShare repository) ########
 files <- list.files(pattern='NCEI_Details')
 
 file1 <- read.csv(files[1])
@@ -36,9 +36,10 @@ data$Year <- as.numeric(data$start_year) ## for left join later on
 
 ## remove extra date columns
 data <- data[,-c(1:7)]
-## remove other unneccesary columns
+## remove other unneccesary columns (year, begin_azimuth, end azimuth)
 data <- data[,-c(5,27,30)]
 
+############# PROCESSING OF DAMAGE ESTIMATES ######################
 ## convert damage to numeric
 factor_property <- ifelse(str_detect(data$DAMAGE_PROPERTY,'K'),1e3,ifelse(str_detect(data$DAMAGE_PROPERTY,'M'),1e6,1))
 data$damage_property_numeric <- factor_property * as.numeric(str_remove(data$DAMAGE_PROPERTY,'K|M'))
@@ -57,7 +58,7 @@ names(data)[45] <- 'CPI_y'
 data$damage_property_adj2022 <- data$damage_property_numeric * (292.655/data$CPI_y) ## these values seem to check out given the CPI went up 87% over this time period
 data$damage_crop_adj2022 <- data$damage_crop_numeric * (292.655/data$CPI_y)
 
-## calculate sum of losses
+################ CALCULATE SUM OF LOSSES #####################
 ## by year, episode, and event (original dataset has virtually all unique event ids)
 data <- data %>%
   group_by(start_year) %>%
@@ -69,6 +70,6 @@ data <- data %>%
          sum_damage_crop_episode = sum(damage_crop_adj2022,na.rm=T)) %>%
   ungroup()
 
-##### SHAR SAN BERNARDINO             ########
+################ SHAR SAN BERNARDINO #########################
 ## county level analysis for San Bernardino
 sanbern <- data[data$CZ_NAME == 'SAN BERNARDINO',]
