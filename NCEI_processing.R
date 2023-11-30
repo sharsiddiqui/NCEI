@@ -154,3 +154,74 @@ sanbern_episode <- sanbern %>%
 ggplot(sanbern_episode) +
   geom_histogram(aes(Year),bins=26,color='black') +
   theme_bw() + ylab('Count') 
+
+
+
+########                        #######
+########  VENTURA COUNTY  06111 #######
+########                        #######
+
+
+#Dataset with just California Data
+California <- data %>%
+  filter(STATE == 'CALIFORNIA')
+
+#Creating new dataset with just Ventura County Data 
+Ventura <- California[grep('VENTURA',California$CZ_NAME), ] ##Tried to find the zoning codes...kept the CZ_NAME column but made an additional column (COUNTY) labeling all of the names just Ventura. 
+Ventura <- Ventura%>%
+  mutate("COUNTY" = substr( CZ_NAME, start=1,stop=7))
+
+#Filter out NAs
+Ventura <- Ventura%>%
+  filter(!is.na(EPISODE_ID),
+         !is.na(EVENT_ID))
+
+##Episode and ID Count
+n_distinct(Ventura$EPISODE_ID)#352
+n_distinct(Ventura$EVENT_ID)#557 
+
+#######                   ########
+####### Descriptive Stats ########
+#######                   ########
+
+
+##Number of (non)distinct episodes/events per year
+Summary <- Ventura%>%
+  group_by(Year)%>%
+  summarise(numEpisodeUnique = sum(n_distinct(EPISODE_ID)),
+          numEventUnique = sum(n_distinct(EVENT_ID)))
+
+mean(Summary$numEpisode)
+sd(Summary$numEpisode)
+#~13.04 episodes happened on avergage per year with a std of 5.33
+
+mean(Summary$numEvent)
+sd(Summary$numEvent)
+#~20.63 events happened on average per year with a std of 11.68
+
+##Number of unique Events per Episode 
+Summary2 <- Ventura%>%
+  group_by(EPISODE_ID)%>%
+  summarise(numEvent = sum(n_distinct(EVENT_ID)))
+
+mean(Summary2$numEvent)
+sd(Summary2$numEvent)
+#~1.6 events on average per episode with a std of 1.12
+
+###Number of event types per year
+Summary3 <- Ventura%>%
+  group_by(Year)%>%
+  summarise(numEventType = sum(n_distinct(EVENT_TYPE)))
+
+mean(Summary3$numEventType)
+sd(Summary3$numEventType)
+##~5.19 event types on average per year with a std of 2.06
+
+###Number of event types per episode 
+Summary4 <- Ventura%>%
+  group_by(EPISODE_ID)%>%
+  summarise(numEventType = n_distinct(EVENT_TYPE))
+
+mean(Summary4$numEventType)
+sd(Summary4$numEventType)
+##~1.13 event types on average per episode with a std of .48
