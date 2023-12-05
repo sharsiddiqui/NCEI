@@ -225,3 +225,7 @@ Summary4 <- Ventura%>%
 mean(Summary4$numEventType)
 sd(Summary4$numEventType)
 ##~1.13 event types on average per episode with a std of .48
+
+
+### Emily Code Los Angeles County ### 
+## insert code here
