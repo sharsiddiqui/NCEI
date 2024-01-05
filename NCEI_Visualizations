@@ -1,0 +1,201 @@
+
+##each zone align with county or counties --> column for each zone create # zones in each county and county represents each zone 
+##For each county - area dominance per county 
+
+data <- read_csv("NCEI_CA_22DEC23.csv")
+
+###Choose 3-5 hazards for Ventura County
+###Individual event occurrence trends in Ventura County
+
+##sub-setting the data for Ventura County 
+California <- data %>%
+  filter(STATE == 'CALIFORNIA')
+##looking at loss distribution within Ventura (Zone and County)
+Ventura_With_Zones <- California[grep('VENTURA',California$CZ_NAME), ]
+
+##Lookiing into the damges 
+view(Ventura_With_Zones %>%
+  filter(EVENT_TYPE %in% c('Flash Flood', 'Flood', 'Wildfire', 'Heavy Rain')) %>%
+  group_by(EPISODE_ID) %>%
+  summarise(total_damage = sum(damage_property_adj2022)))
+
+Ventura_With_Zones %>%
+  filter(EVENT_TYPE %in% c('Flash Flood', 'Flood', 'Wildfire', 'Heavy Rain')) %>%
+  group_by(EPISODE_ID) %>%
+  summarise(total_damage = sum(damage_property_adj2022)) %>%
+  ggplot(aes(x = as.factor(EPISODE_ID), y = total_damage)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Damages per Episode",
+       x = "Episode ID",
+       y = "Total Damage") +
+  ylim(0, NA) 
+
+##how many of each event type are there?
+Num_event_type_Ventura <- Ventura%>%
+  count(EVENT_TYPE) ##Major difference between flood and flash flood?
+
+########### VISUALIZATIONS #####################
+
+###Occurance by event type 
+
+###Wildfires (30)
+Ventura_With_Zones %>%
+  filter(EVENT_TYPE=='Wildfire') %>%
+  group_by(MONTH_NAME) %>%
+  summarise(occurance = n()) %>%
+  ggplot(aes(x = (MONTH_NAME), y = occurance)) +
+  geom_col() +
+  labs(title = "Occurances per Month",
+       x = "Month Name",
+       y = "Number of Occurances") 
+
+###High Wind (207)
+Ventura_With_Zones %>%
+  filter(EVENT_TYPE=='High Wind') %>%
+  group_by(MONTH_NAME) %>%
+  summarise(occurance = n()) %>%
+  ggplot(aes(x = MONTH_NAME, y = occurance)) +
+  geom_col() +
+  labs(title = "Occurances per Month",
+       x = "Month Name",
+       y = "Number of Occurances") 
+
+###Flash Flood(49)
+Ventura_With_Zones %>%
+  filter(EVENT_TYPE=='Flash Flood') %>%
+  group_by(MONTH_NAME) %>%
+  summarise(occurance = n()) %>%
+  ggplot(aes(x = MONTH_NAME, y = occurance)) +
+  geom_col() +
+  labs(title = "Occurances per Month",
+       x = "Month Name",
+       y = "Number of Occurances") 
+
+###Winter Storm(56)
+Ventura_With_Zones %>%
+  filter(EVENT_TYPE=='Winter Storm') %>%
+  group_by(MONTH_NAME) %>%
+  summarise(occurance = n()) %>%
+  ggplot(aes(x = MONTH_NAME, y = occurance)) +
+  geom_col() +
+  labs(title = "Occurances per Month",
+       x = "Month Name",
+       y = "Number of Occurances") 
+
+
+####VISUALS with top  4 event types
+
+selected_hazards <- c('Wildfire', 'High Wind', 'Flash Flood', 'Winter Storm')
+
+
+filtered_data <- Ventura_With_Zones %>%
+  filter(EVENT_TYPE %in% selected_hazards)
+
+
+##Density plot (probability based plot - relative measure of the likelihood of an observation occurring at a specific month)
+ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Density Plot of Hazard Occurrences by Month",
+       x = "Month Name",
+       y = "Density") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+##Stacked Bar Chart 
+ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
+  geom_bar(position = "stack") +
+  labs(title = "Stacked Bar Chart of Hazard Occurrences by Month",
+       x = "Month Name",
+       y = "Number of Occurrences") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+##Faceted Plot 
+ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
+  geom_bar(position = "stack") +
+  labs(title = "Faceted Bar Chart of Hazard Occurrences by Month",
+       x = "Month Name",
+       y = "Number of Occurrences") +
+  facet_wrap(~EVENT_TYPE, scales = "free_y") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+###Bar Plot
+ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
+  geom_bar(position = "dodge", color = "black") +
+  labs(title = "Seasonality of Hazard Occurrences",
+       x = "Month Name",
+       y = "Number of Occurrences",
+       fill = "Hazard Type") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+###Looking at Seasonality weekly
+
+filtered_data_weekly <- filtered_data%>%
+  mutate(Week = week(start_date))
+
+##Density plot (probability based plot - relative measure of the likelihood of an observation occurring at a specific month)
+ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Density Plot of Hazard Occurrences by Week",
+       x = "Week",
+       y = "Density") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+##Stacked Bar Chart 
+ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
+  geom_bar(position = "stack") +
+  labs(title = "Stacked Bar Chart of Hazard Occurrences by Week",
+       x = "Week",
+       y = "Number of Occurrences") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+##Faceted Plot 
+ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
+  geom_bar(position = "stack") +
+  labs(title = "Faceted Bar Chart of Hazard Occurrences by Week",
+       x = "Week",
+       y = "Number of Occurrences") +
+  facet_wrap(~EVENT_TYPE, scales = "free_y") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+###Bar Plot
+ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
+  geom_bar(position = "dodge", color = "black") +
+  labs(title = "Seasonality of Hazard Occurrences",
+       x = "Week",
+       y = "Number of Occurrences",
+       fill = "Hazard Type") +
+  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+
+###HEATMAPS
+
+aggregated_data <- filtered_data_weekly %>%
+  group_by(Year, start_month, EVENT_TYPE) %>%
+  summarise(Count = n()) #getting the frequency of event type of every month in every year 
+
+# Create the heatmap
+ggplot(aggregated_data, aes(x = start_month, y = Year, fill = Count)) +
+  geom_tile() +
+  labs(title = "Hazard Occurrences Count Over Years and Months",
+       x = "Month",
+       y = "Year",
+       fill = "Hazard Count") +
+  theme_minimal()
+
+
+ggplot(aggregated_data, aes(x = start_month, y = Year, fill = Count)) +
+  geom_tile() +
+  labs(title = "Hazard Occurrences Count Over Years and Months",
+       x = "Month",
+       y = "Year",
+       fill = "Hazard Count") +
+  facet_wrap(~ EVENT_TYPE, scales = "free_y") +  # Facet by EVENT_TYPE
+  theme_minimal()
