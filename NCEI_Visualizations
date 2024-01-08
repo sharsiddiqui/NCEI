@@ -1,128 +1,184 @@
+# with proportionate loss data (by land area)
+data = read.csv('C:/Users/emily/OneDrive/Desktop/Compound Threats/Historical Analysis/Data/NCEI_CA_1_8_24_clean_loss.csv')
+# 50,073 obs of 32 vars
 
-##each zone align with county or counties --> column for each zone create # zones in each county and county represents each zone 
-##For each county - area dominance per county 
+# delete first column -- unnecessary
+data <- data[ -c(1) ]
 
-data <- read_csv("NCEI_CA_22DEC23.csv")
+# create a County_FIPS variable from NCEI to join to County_FIPS nws data
+# leading zeros for CZ_FIPS code and County_FIPS code
+data$CZ_FIPS = str_pad(data$CZ_FIPS, 3, pad = "0")
+head(data$CZ_FIPS) # "009" "006" "015" "017" "016" "013"
+data$County_FIPS = str_pad(data$County_FIPS, 5, pad = "0")
+# leading zeros for STATE_CZ_FIPS
+data$STATE_CZ_FIPS = str_pad(data$STATE_CZ_FIPS, 5, pad = "0")
+head(data$STATE_CZ_FIPS) # "06009" "06006" "06015" "06017" "06016" "06013"
 
-###Choose 3-5 hazards for Ventura County
-###Individual event occurrence trends in Ventura County
+
+# from here, we should be looking at the County_FIPS level.
+data$EVENT_ID = as.numeric(data$EVENT_ID)
+length(unique(data$EVENT_ID)) # 32,960 unique event IDs in CA
+# implies that for the CZ_TYPE = Z obs, there are multiple counties (distinct rows) per zone
+
+
+
+#### OUTSTANDING ISSUE ####
+# how many obs have NA County_FIPS?
+table(is.na(data$County_FIPS)) # 9037 obs have NA County_FIPS
+table(is.na(data$County_FIPS), data$CZ_TYPE) # all obs with NA County_FIPS are zone events
+table(is.na(data$County_FIPS), data$start_year) # 9037 zones not joined to counties
+# may need to return to this
+# "coast" zones seem to be missing...
+# 001 is redwood coast; 002 is mendocino coast; 003 is north coast interior
+# "county" named zones also seem to be missing -- possible conflation between zones/counties for these
+# example: Siskiyou County; various Siskiyou zones
+
+
+#### OUTSTANDING ####
+# group EVENT_TYPES 
+# example: extreme cold/wind chill + cold/wind chill = cold/wind chill
+table(data$EVENT_TYPE)
+
+
+### Choose 3-5 hazards at the county level
+### Individual event occurrence trends in County
 
 ##sub-setting the data for Ventura County 
 California <- data %>%
-  filter(STATE == 'CALIFORNIA')
-##looking at loss distribution within Ventura (Zone and County)
-Ventura_With_Zones <- California[grep('VENTURA',California$CZ_NAME), ]
+ filter(STATE == 'CALIFORNIA') # may already be filtered
 
-##Lookiing into the damges 
-view(Ventura_With_Zones %>%
-  filter(EVENT_TYPE %in% c('Flash Flood', 'Flood', 'Wildfire', 'Heavy Rain')) %>%
-  group_by(EPISODE_ID) %>%
-  summarise(total_damage = sum(damage_property_adj2022)))
+# zones versus events in ca
+table(California$CZ_TYPE)
+table(California$CZ_TYPE, California$EVENT_TYPE)
 
-Ventura_With_Zones %>%
-  filter(EVENT_TYPE %in% c('Flash Flood', 'Flood', 'Wildfire', 'Heavy Rain')) %>%
-  group_by(EPISODE_ID) %>%
-  summarise(total_damage = sum(damage_property_adj2022)) %>%
-  ggplot(aes(x = as.factor(EPISODE_ID), y = total_damage)) +
-  geom_col() +
-  coord_flip() +
-  labs(title = "Damages per Episode",
-       x = "Episode ID",
-       y = "Total Damage") +
-  ylim(0, NA) 
 
-##how many of each event type are there?
-Num_event_type_Ventura <- Ventura%>%
-  count(EVENT_TYPE) ##Major difference between flood and flash flood?
+##looking at loss distribution within X County (Zone and County)
+##note: replaced "ventura" with "county" so that we can plug in whatever county we want here
+county <- California[grep('Los Angeles',California$County), ] 
+# note: renamed county
+# so that this is the only place where we could need to change county name
 
-########### VISUALIZATIONS #####################
 
-###Occurance by event type 
+###Occurence by event type 
+###facet by event type -- all hazards
+# all hazards
+table(county$EVENT_TYPE)
+ggplot(county, aes(x = start_year, fill = EVENT_TYPE)) +
+  geom_bar() + 
+  ylab('County Hazard Event Count') + xlab('Year')
+# specific hazards
+county %>% 
+  filter(EVENT_TYPE == "Wildfire" | EVENT_TYPE =="Flood"|EVENT_TYPE == "Heavy Rain"|EVENT_TYPE =="Flash Flood"|EVENT_TYPE =="Debris Flow" | EVENT_TYPE == "High Wind") %>%
+  ggplot(aes(x = as.factor(start_month), fill = EVENT_TYPE)) +
+  geom_bar() + 
+  ylab('County Hazard Event Count') + xlab('Month') + 
+  theme_minimal()
+
 
 ###Wildfires (30)
-Ventura_With_Zones %>%
+county %>%
   filter(EVENT_TYPE=='Wildfire') %>%
-  group_by(MONTH_NAME) %>%
+  group_by(start_month) %>%
   summarise(occurance = n()) %>%
-  ggplot(aes(x = (MONTH_NAME), y = occurance)) +
+  ggplot(aes(x = (start_month), y = occurance)) +
   geom_col() +
-  labs(title = "Occurances per Month",
+  labs(title = "Occurences per Month",
        x = "Month Name",
-       y = "Number of Occurances") 
+       y = "Number of Occurences") 
 
 ###High Wind (207)
-Ventura_With_Zones %>%
+county %>%
   filter(EVENT_TYPE=='High Wind') %>%
-  group_by(MONTH_NAME) %>%
+  group_by(start_month) %>%
   summarise(occurance = n()) %>%
-  ggplot(aes(x = MONTH_NAME, y = occurance)) +
+  ggplot(aes(x = start_month, y = occurance)) +
   geom_col() +
-  labs(title = "Occurances per Month",
+  labs(title = "Occurences per Month",
        x = "Month Name",
-       y = "Number of Occurances") 
+       y = "Number of Occurences") 
 
 ###Flash Flood(49)
-Ventura_With_Zones %>%
+county %>%
   filter(EVENT_TYPE=='Flash Flood') %>%
-  group_by(MONTH_NAME) %>%
+  group_by(start_month) %>%
   summarise(occurance = n()) %>%
-  ggplot(aes(x = MONTH_NAME, y = occurance)) +
+  ggplot(aes(x = start_month, y = occurance)) +
   geom_col() +
-  labs(title = "Occurances per Month",
+  labs(title = "Occurences per Month",
        x = "Month Name",
-       y = "Number of Occurances") 
+       y = "Number of Occurences") 
 
 ###Winter Storm(56)
-Ventura_With_Zones %>%
+county %>%
   filter(EVENT_TYPE=='Winter Storm') %>%
-  group_by(MONTH_NAME) %>%
+  group_by(start_month) %>%
   summarise(occurance = n()) %>%
-  ggplot(aes(x = MONTH_NAME, y = occurance)) +
+  ggplot(aes(x = start_month, y = occurance)) +
   geom_col() +
-  labs(title = "Occurances per Month",
+  labs(title = "Occurences per Month",
        x = "Month Name",
-       y = "Number of Occurances") 
+       y = "Number of Occurences") 
 
 
-####VISUALS with top  4 event types
-
-selected_hazards <- c('Wildfire', 'High Wind', 'Flash Flood', 'Winter Storm')
 
 
-filtered_data <- Ventura_With_Zones %>%
+#### select hazard events
+
+#selected_hazards <- c('Wildfire', 'High Wind', 'Flash Flood', 'Winter Storm')
+selected_hazards <- c('Wildfire', 'High Wind', 'Flash Flood', 'Winter Storm', 'Heavy Rain', 'Flood', 'Debris Flow')
+
+filtered_data <- county %>%
   filter(EVENT_TYPE %in% selected_hazards)
 
-
 ##Density plot (probability based plot - relative measure of the likelihood of an observation occurring at a specific month)
-ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
-  geom_density(alpha = 0.5) +
+ggplot(filtered_data, aes(x = start_month, colour = EVENT_TYPE, fill = EVENT_TYPE)) +
+  geom_density(alpha = 0.05, lwd = 1.2, linetype = 1) +
   labs(title = "Density Plot of Hazard Occurrences by Month",
        x = "Month Name",
        y = "Density") +
-  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  #scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
   theme_minimal()
 
+ggplot(filtered_data, aes(x = start_year, colour = EVENT_TYPE, fill = EVENT_TYPE)) +
+  geom_density(alpha = 0.05, lwd = 1.2, linetype = 1) +
+  labs(title = "Density Plot of Hazard Occurrences by Year",
+       x = "Year",
+       y = "Density") +
+  #scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal()
+
+# faceted density plot
+ggplot(filtered_data, aes(x = start_month)) +
+  geom_density(alpha = 0.5, lwd = 1.2, linetype = 1) +
+  labs(title = "Density Plot of Hazard Occurrences by Month",
+       x = "Month Name",
+       y = "Density") +
+  #scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+  theme_minimal() + 
+  facet_wrap(~EVENT_TYPE)
+
+
 ##Stacked Bar Chart 
-ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
+ggplot(filtered_data, aes(x = start_month, fill = EVENT_TYPE)) +
   geom_bar(position = "stack") +
   labs(title = "Stacked Bar Chart of Hazard Occurrences by Month",
        x = "Month Name",
        y = "Number of Occurrences") +
-  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+ # scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
   theme_minimal()
 
 ##Faceted Plot 
-ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
+ggplot(filtered_data, aes(x = as.factor(start_month), fill = EVENT_TYPE)) +
   geom_bar(position = "stack") +
   labs(title = "Faceted Bar Chart of Hazard Occurrences by Month",
        x = "Month Name",
        y = "Number of Occurrences") +
   facet_wrap(~EVENT_TYPE, scales = "free_y") +
-  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+ # scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
   theme_minimal()
 
 ###Bar Plot
-ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
+ggplot(filtered_data, aes(x = as.factor(start_month), fill = EVENT_TYPE)) +
   geom_bar(position = "dodge", color = "black") +
   labs(title = "Seasonality of Hazard Occurrences",
        x = "Month Name",
@@ -135,33 +191,42 @@ ggplot(filtered_data, aes(x = MONTH_NAME, fill = EVENT_TYPE)) +
 
 filtered_data_weekly <- filtered_data%>%
   mutate(Week = week(start_date))
+str(filtered_data_weekly$Week)
+
+filtered_data_weekly %>% 
+  filter(EVENT_TYPE == "Wildfire" | EVENT_TYPE =="Flood"|EVENT_TYPE == "Heavy Rain"|EVENT_TYPE =="Flash Flood"|EVENT_TYPE =="Debris Flow" | EVENT_TYPE == "High Wind") %>%
+  ggplot(aes(x = Week, fill = EVENT_TYPE)) +
+  geom_bar() + 
+  ylab('County Hazard Event Count') + xlab('Week') + 
+  theme_minimal()
+
 
 ##Density plot (probability based plot - relative measure of the likelihood of an observation occurring at a specific month)
-ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
+ggplot(filtered_data_weekly, aes(x = as.factor(Week), fill = EVENT_TYPE)) +
   geom_density(alpha = 0.5) +
   labs(title = "Density Plot of Hazard Occurrences by Week",
        x = "Week",
        y = "Density") +
-  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+# scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
   theme_minimal()
 
 ##Stacked Bar Chart 
-ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
+ggplot(filtered_data_weekly, aes(x = as.factor(Week), fill = EVENT_TYPE)) +
   geom_bar(position = "stack") +
   labs(title = "Stacked Bar Chart of Hazard Occurrences by Week",
        x = "Week",
        y = "Number of Occurrences") +
-  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+ # scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
   theme_minimal()
 
 ##Faceted Plot 
-ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
+ggplot(filtered_data_weekly, aes(x = as.factor(Week), fill = EVENT_TYPE)) +
   geom_bar(position = "stack") +
   labs(title = "Faceted Bar Chart of Hazard Occurrences by Week",
        x = "Week",
        y = "Number of Occurrences") +
   facet_wrap(~EVENT_TYPE, scales = "free_y") +
-  scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
+ # scale_fill_manual(values = c('Wildfire' = 'red', 'High Wind' = 'blue', 'Flash Flood' = 'green', 'Winter Storm' = 'purple')) +
   theme_minimal()
 
 ###Bar Plot
@@ -178,11 +243,11 @@ ggplot(filtered_data_weekly, aes(x = Week, fill = EVENT_TYPE)) +
 ###HEATMAPS
 
 aggregated_data <- filtered_data_weekly %>%
-  group_by(Year, start_month, EVENT_TYPE) %>%
+  group_by(start_year, start_month, EVENT_TYPE, Week) %>%
   summarise(Count = n()) #getting the frequency of event type of every month in every year 
 
-# Create the heatmap
-ggplot(aggregated_data, aes(x = start_month, y = Year, fill = Count)) +
+# Create the heatmap - monthly
+ggplot(aggregated_data, aes(x = as.factor(start_month), y = start_year, fill = Count)) +
   geom_tile() +
   labs(title = "Hazard Occurrences Count Over Years and Months",
        x = "Month",
@@ -191,7 +256,7 @@ ggplot(aggregated_data, aes(x = start_month, y = Year, fill = Count)) +
   theme_minimal()
 
 
-ggplot(aggregated_data, aes(x = start_month, y = Year, fill = Count)) +
+ggplot(aggregated_data, aes(x = start_month, y = start_year, fill = Count)) +
   geom_tile() +
   labs(title = "Hazard Occurrences Count Over Years and Months",
        x = "Month",
@@ -199,3 +264,368 @@ ggplot(aggregated_data, aes(x = start_month, y = Year, fill = Count)) +
        fill = "Hazard Count") +
   facet_wrap(~ EVENT_TYPE, scales = "free_y") +  # Facet by EVENT_TYPE
   theme_minimal()
+
+# Create the heatmap - weekly
+ggplot(aggregated_data, aes(x = as.factor(Week), y = start_year, fill = Count)) +
+  geom_tile() +
+  labs(title = "Hazard Occurrences Count Over Years and Weeeks",
+       x = "Week",
+       y = "Year",
+       fill = "Hazard Count") +
+  theme_minimal()
+
+
+ggplot(aggregated_data, aes(x = as.factor(Week), y = start_year, fill = Count)) +
+  geom_tile() +
+  labs(title = "Hazard Occurrences Count Over Years and Weeks",
+       x = "Week",
+       y = "Year",
+       fill = "Hazard Count") +
+  facet_wrap(~ EVENT_TYPE, scales = "free_y") +  # Facet by EVENT_TYPE
+  theme_minimal()
+
+
+# state level data 
+aggregated_data_CA <- data %>%
+  group_by(County, start_year, start_month, EVENT_TYPE) %>%
+  summarise(Count = n()) #getting the frequency of event type of every month in every year 
+
+# Create the heatmap at state level 
+ggplot(aggregated_data_CA, aes(y = County, x = start_year, fill = Count)) +
+  geom_tile(color = "white") +
+  labs(title = "Annual Hazard Occurrences Count Per County",
+       x = "Year",
+       y = "County",
+       fill = "Hazard Count") +
+  theme_light() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+
+
+ggplot(aggregated_data_CA, aes(y = County, x = as.factor(start_month), fill = Count)) +
+  geom_tile(color = "white") +
+  labs(title = "Monthly Hazard Occurrences Count Per County (1996 - 2022)",
+       x = "Month",
+       y = "County",
+       fill = "Hazard Count") +
+  theme_minimal() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+
+# by event type per county
+aggregated_data_CA %>%
+  filter(EVENT_TYPE %in% selected_hazards) %>%
+  ggplot(aes(y = County, x = as.factor(EVENT_TYPE), fill = Count)) +
+  geom_tile(color = "white") +
+  labs(title = "",
+       x = "Event Type",
+       y = "County",
+       fill = "Hazard Count") +
+  theme_minimal() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+aggregated_data_CA %>%
+  filter(EVENT_TYPE %in% selected_hazards) %>%
+  ggplot(aes(y = as.factor(EVENT_TYPE), x = as.factor(start_year), fill = Count)) +
+  geom_tile(color = "white") +
+  labs(title = "",
+       x = "Year",
+       y = "Event Type",
+       fill = "Hazard Count") +
+  theme_minimal() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+
+# by event type per county by year
+aggregated_data_CA %>%
+  filter(County == "Los Angeles") %>%
+  filter(EVENT_TYPE %in% selected_hazards) %>%
+  ggplot(aes(x = as.factor(start_year), y = as.factor(EVENT_TYPE), fill = Count)) +
+  geom_tile(color = "white") +
+  labs(title = "",
+       y = "Event Type",
+       x = "Year",
+       fill = "Hazard Count") +
+  theme_minimal() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+
+
+aggregated_data_CA %>%
+  filter(County == "Los Angeles") %>%
+  filter(EVENT_TYPE %in% selected_hazards) %>%
+  ggplot(aes(x = as.factor(start_month), y = as.factor(EVENT_TYPE), fill = Count)) +
+  geom_tile(color = "white") +
+  labs(title = "",
+       y = "Event Type",
+       x = "Month",
+       fill = "Hazard Count") +
+  theme_minimal() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+#################################################################
+##Lookiing into the damages 
+##############################################################
+
+
+#selected_hazards <- c('Wildfire', 'High Wind', 'Flash Flood', 'Winter Storm')
+selected_hazards <- c('Wildfire', 'High Wind', 'Flash Flood', 'Winter Storm', 'Heavy Rain', 'Flood', 'Debris Flow')
+
+filtered_data <- data %>%
+  filter(EVENT_TYPE %in% selected_hazards)
+
+
+California_sum <- filtered_data %>%
+  group_by(EVENT_TYPE, start_year) %>%
+  summarise(Sum_Damage_Prop = sum(damage_dist_property, na.rm = TRUE),
+            Sum_Damage_Crop = sum(damage_dist_crop, na.rm = TRUE))
+
+
+# annual heatmap of hazard losses - property in CA
+ggplot(California_sum, aes(x = start_year, y = EVENT_TYPE, fill = Sum_Damage_Prop)) +
+  geom_tile(colour = "white") +
+  labs(title = "Hazard Damage Sum Over Years",
+       x = "Year",
+       y = "Event Type",
+       fill = "Damage Sum Property") +
+  theme_minimal() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+# annual heatmap of hazard losses - crops in CA
+ggplot(California_sum, aes(x = start_year, y = EVENT_TYPE, fill = Sum_Damage_Crop)) +
+  geom_tile(colour = "white") +
+  labs(title = "Hazard Damage Sum Over Years and Months",
+       x = "Year",
+       y = "Event Type",
+       fill = "Damage Sum Property") +
+  theme_minimal() + 
+  scale_fill_continuous(low = "bisque", high = "darkred", na.value = "white")
+
+
+
+
+summary(data$damage_dist_property)
+summary(data$damage_dist_crop)
+
+options(scipen = 10000)
+data %>% # property damages
+  ggplot(aes(y = damage_dist_property, x = as.factor(start_year))) +
+  geom_boxplot() + 
+  scale_y_continuous(limits=c(0,10000000), expand = c(0, 0)) + 
+  theme_minimal() + 
+  labs(x = "Year", y = "Estimated Property Damage (2022 USD)")
+
+
+data %>% # crop damages
+  ggplot(aes(y = damage_dist_crop, x = as.factor(start_year))) +
+  geom_boxplot() + 
+  scale_y_continuous(limits=c(0,10000000), expand = c(0, 0)) + 
+  theme_minimal() + 
+  labs(x = "Year", y = "Estimated Property Damage (2022 USD)")
+
+data %>% # crop damages
+  ggplot(aes(y = damage_dist_crop, x = as.factor(start_year))) +
+  geom_boxplot() + 
+  scale_y_continuous(limits=c(0,50000), expand = c(0, 0)) + 
+  theme_minimal() + 
+  labs(x = "Year", y = "Estimated Crop Damage (2022 USD)")
+
+### heatmap of losses
+view(county %>%
+       filter(EVENT_TYPE %in% c('Flash Flood', 'Flood', 'Wildfire', 'Heavy Rain')) %>%
+       group_by(EPISODE_ID) %>%
+       summarise(total_damage = sum(damage_property_adj2022)))
+
+County_With_Zones %>%
+  filter(EVENT_TYPE %in% c('Flash Flood', 'Flood', 'Wildfire', 'Heavy Rain')) %>%
+  group_by(EPISODE_ID) %>%
+  summarise(total_damage = sum(damage_property_adj2022)) %>%
+  ggplot(aes(x = as.factor(EPISODE_ID), y = total_damage)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Damages per Episode",
+       x = "Episode ID",
+       y = "Total Damage") +
+  ylim(0, NA) 
+
+##how many of each event type are there?
+Num_event_type_County <- County%>%
+  count(EVENT_TYPE) ##Major difference between flood and flash flood?
+
+
+
+
+
+################ CALCULATE SUM OF LOSSES #####################
+## by year, episode, and event (original dataset has virtually all unique event ids)
+data <- data %>%
+  group_by(start_year) %>%
+  mutate(sum_damage_property_annual = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_annual = sum(damage_crop_adj2022,na.rm=T)) %>%
+  ungroup() %>%
+  group_by(EPISODE_ID) %>%
+  mutate(sum_damage_property_episode = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_episode = sum(damage_crop_adj2022,na.rm=T)) %>%
+  ungroup()
+
+summary(data$sum_damage_crop_annual)
+
+#############################################################
+### Old visualization code ###
+### Can ignore but didn't want to delete yet ###
+############################################################
+
+## county level analysis
+## NOTE: for a specific county, it is important to rerun the total sums of losses again
+## otherwise those numbers would reflect all counties across the US, this is done right after
+## filtering for the county
+sanbern <- data[data$CZ_NAME == 'SAN BERNARDINO',]
+
+sanbern <- sanbern %>%
+  group_by(start_year) %>%
+  mutate(sum_damage_property_annual = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_annual = sum(damage_crop_adj2022,na.rm=T)) %>%
+  ungroup() %>%
+  group_by(EPISODE_ID) %>%
+  mutate(sum_damage_property_episode = sum(damage_property_adj2022,na.rm=T),
+         sum_damage_crop_episode = sum(damage_crop_adj2022,na.rm=T)) %>%
+  ungroup()
+
+
+sanbern %>%
+  mutate(t_events = nrow(.), ## total events
+  t_episodes = length(unique(EPISODE_ID))) ## total episodes
+  
+## MEAN NUMBER OF EVENTS PER YEAR
+sanbern %>% group_by(start_year) %>%
+  summarise(x = length(unique(EVENT_ID))) %>%
+  ungroup() %>%
+  summarise(mean(x),sd(x))
+
+## MEAN NUMBER OF EPISODES PER YEAR
+sanbern %>% group_by(start_year) %>%
+  summarise(x = length(unique(EPISODE_ID))) %>%
+  ungroup() %>%
+  summarise(mean(x),sd(x))
+
+## MEAN NUMBER OF EVENTS PER EPISODE 
+sanbern %>% group_by(EPISODE_ID) %>%
+  summarise(x = length(EVENT_ID)) %>%
+  ungroup() %>%
+  summarise(mean(x),sd(x))
+
+hazard_table <- as.data.frame(table(sanbern$start_year,sanbern$EVENT_TYPE))
+names(hazard_table) <- c('Year','Hazard','Count')
+hazard_table <- hazard_table %>%
+  group_by(Year) %>%
+  mutate(unique_ct = length(which(Count!=0))) %>%
+  ungroup() %>% ## these are supposed to be the same for every row, 
+  mutate(mean = mean(unique_ct),sd = sd(unique_ct))  ## calculates an overall average
+
+hazard_table_episode <- as.data.frame(table(sanbern$EPISODE_ID,sanbern$EVENT_TYPE))
+names(hazard_table_episode) <- c('EPISODE_ID','Hazard','Count')
+hazard_table_episode <- hazard_table_episode %>%
+  group_by(EPISODE_ID) %>%
+  mutate(unique_ct = length(which(Count!=0))) %>%
+  ungroup() %>% ## these are supposed to be the same for every row, 
+  mutate(mean = mean(unique_ct),sd = sd(unique_ct))  ## calculates an overall average
+
+## visualization of hazard data
+## Event Frequency vs Year
+ggplot(sanbern) +
+  geom_histogram(aes(Year),bins=26,color='black') +
+  theme_bw() + ylab('Count') 
+
+##  Event Frequency vs Year by hazard type
+ggplot(sanbern[!is.na(sanbern$EVENT_TYPE),]) +
+  geom_histogram(aes(Year),bins=26,color='black') +
+  #geom_point(aes(Year,sum_damage_property_annual/1e7),color='black') +
+  facet_wrap(~EVENT_TYPE)+
+  theme_bw() + ylab('Count') 
+
+## Event-scale Losses by Year by Hazard type
+ggplot(sanbern[!is.na(sanbern$EVENT_TYPE),]) +
+  geom_point(aes(Year,damage_property_adj2022),color='black') +
+  facet_wrap(~EVENT_TYPE)+
+  theme_bw() + ylab('Count') 
+
+## Episode Frequency vs Year
+sanbern_episode <- sanbern %>% 
+  group_by(Year, EPISODE_ID) %>%
+  summarise(sum_damage_property_annual_episode = sum(sum_damage_property_annual)) %>%
+  ungroup()
+
+ggplot(sanbern_episode) +
+  geom_histogram(aes(Year),bins=26,color='black') +
+  theme_bw() + ylab('Count') 
+
+
+
+########                        #######
+########  VENTURA COUNTY  06111 #######
+########                        #######
+
+
+#Dataset with just California Data
+California <- data %>%
+  filter(STATE == 'CALIFORNIA')
+
+#Creating new dataset with just Ventura County Data 
+Ventura <- California[grep('VENTURA',California$CZ_NAME), ] ##Tried to find the zoning codes...kept the CZ_NAME column but made an additional column (COUNTY) labeling all of the names just Ventura. 
+Ventura <- Ventura%>%
+  mutate("COUNTY" = substr( CZ_NAME, start=1,stop=7))
+
+#Filter out NAs
+Ventura <- Ventura%>%
+  filter(!is.na(EPISODE_ID),
+         !is.na(EVENT_ID))
+
+##Episode and ID Count
+n_distinct(Ventura$EPISODE_ID)#352
+n_distinct(Ventura$EVENT_ID)#557 
+
+#######                   ########
+####### Descriptive Stats ########
+#######                   ########
+
+
+##Number of (non)distinct episodes/events per year
+Summary <- Ventura%>%
+  group_by(Year)%>%
+  summarise(numEpisodeUnique = sum(n_distinct(EPISODE_ID)),
+          numEventUnique = sum(n_distinct(EVENT_ID)))
+
+mean(Summary$numEpisode)
+sd(Summary$numEpisode)
+#~13.04 episodes happened on avergage per year with a std of 5.33
+
+mean(Summary$numEvent)
+sd(Summary$numEvent)
+#~20.63 events happened on average per year with a std of 11.68
+
+##Number of unique Events per Episode 
+Summary2 <- Ventura%>%
+  group_by(EPISODE_ID)%>%
+  summarise(numEvent = sum(n_distinct(EVENT_ID)))
+
+mean(Summary2$numEvent)
+sd(Summary2$numEvent)
+#~1.6 events on average per episode with a std of 1.12
+
+###Number of event types per year
+Summary3 <- Ventura%>%
+  group_by(Year)%>%
+  summarise(numEventType = sum(n_distinct(EVENT_TYPE)))
+
+mean(Summary3$numEventType)
+sd(Summary3$numEventType)
+##~5.19 event types on average per year with a std of 2.06
+
+###Number of event types per episode 
+Summary4 <- Ventura%>%
+  group_by(EPISODE_ID)%>%
+  summarise(numEventType = n_distinct(EVENT_TYPE))
+
+mean(Summary4$numEventType)
+sd(Summary4$numEventType)
+##~1.13 event types on average per episode with a std of .48
