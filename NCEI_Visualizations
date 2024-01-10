@@ -1,4 +1,8 @@
-# with proportionate loss data (by land area)
+##############################################################################
+### VISUALIZATIONS ###
+##############################################################################
+
+# import most recent cleaned NCEI data with losses
 data = read.csv('C:/Users/emily/OneDrive/Desktop/Compound Threats/Historical Analysis/Data/NCEI_CA_1_8_24_clean_loss.csv')
 # 50,073 obs of 32 vars
 
@@ -39,6 +43,16 @@ table(is.na(data$County_FIPS), data$start_year) # 9037 zones not joined to count
 # example: extreme cold/wind chill + cold/wind chill = cold/wind chill
 table(data$EVENT_TYPE)
 
+
+### HAZARD FREQUENCY VISUALIZATIONS ###
+
+### Choose 3-5 hazards at the county level
+### Individual event occurrence trends in County
+
+##sub-setting the data for Ventura County 
+California <- data %>%
+ filter(STATE == 'CALIFORNIA') # may already be filtered
+# with proportionate loss data (by land area)
 
 ### Choose 3-5 hazards at the county level
 ### Individual event occurrence trends in County
