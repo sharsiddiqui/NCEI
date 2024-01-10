@@ -477,3 +477,41 @@ table(is.na(data$County_FIPS), data$start_year) # 9037 zones not joined to count
 # group EVENT_TYPES 
 # example: extreme cold/wind chill + cold/wind chill = cold/wind chill
 table(data$EVENT_TYPE)
+
+#################################################################################
+### MAPS OF HAZARD FREQUENCY / COUNTY ### 
+#################################################################################
+
+### Map 1A: total hazard events per county from 1996  - 2022
+#   create a df for total events/county from 1996 - 2022
+map1a = data %>%
+  group_by(County) %>%
+  summarise(event_count = n()) # event count
+#   create a df for total episodes/county from 1996 - 2022
+map1a.2 = data %>%
+  group_by(County) %>%
+  summarise(episode_count = length(unique(EPISODE_ID))) # included this version but assume going with map1a for now
+
+
+### INSERT SHAR MAPPING CODE FOR MAP 1a ###
+
+
+### Map 1B: total [specific hazard] events per county from 1996 - 2022
+map1b = data %>%
+  filter(EVENT_TYPE=='Wildfire') %>% # went with wildfires for now, but could be changed
+  group_by(County) %>%
+  summarise(wildfire_count = n())
+
+### INSERT SHAR MAPPING CODE FOR MAP 1b ###
+
+
+### INSERT BETH CODE ON HAZARD DAYS ###
+
+### Map 2A: total compounding hazard events per county from 1996 - 2022 (occur within same day/24 hr period)
+
+### Map 2B: total compounding(/cascading) hazard events per county from 1996 - 2022 (within same week)
+
+
+
+
+
