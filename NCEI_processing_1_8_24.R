@@ -14,7 +14,9 @@ library(cdlTools) # for converting geographic names, abbreviations, FIPS
 library(dplyr)
 library(mapview)
 
-################## DATA DOWNLOAD ######################
+#################################################################################
+### uploading and merging raw NCEI Storm Data ###
+#################################################################################
 
 ## NCEI data (accessed from HydroShare repository) ########
 ## link to data: https://www.hydroshare.org/resource/a4ff2f63a9e44462b7ed7893a085f7ea/ 
