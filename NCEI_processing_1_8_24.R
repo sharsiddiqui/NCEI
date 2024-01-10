@@ -485,11 +485,11 @@ table(data$EVENT_TYPE)
 ### Map 1A: total hazard events per county from 1996  - 2022
 #   create a df for total events/county from 1996 - 2022
 map1a = data %>%
-  group_by(County) %>%
+  group_by(County) %>% # could be grouped by County_FIPS if needed by mapping package(s)
   summarise(event_count = n()) # event count
 #   create a df for total episodes/county from 1996 - 2022
 map1a.2 = data %>%
-  group_by(County) %>%
+  group_by(County) %>% # could be grouped by County_FIPS if needed by mapping package(s)
   summarise(episode_count = length(unique(EPISODE_ID))) # included this version but assume going with map1a for now
 
 
@@ -499,7 +499,7 @@ map1a.2 = data %>%
 ### Map 1B: total [specific hazard] events per county from 1996 - 2022
 map1b = data %>%
   filter(EVENT_TYPE=='Wildfire') %>% # went with wildfires for now, but could be changed
-  group_by(County) %>%
+  group_by(County) %>% # could be grouped by County_FIPS if needed by mapping package(s)
   summarise(wildfire_count = n())
 
 ### INSERT SHAR MAPPING CODE FOR MAP 1b ###
