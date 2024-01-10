@@ -484,19 +484,41 @@ table(data$EVENT_TYPE)
 ### MAPS OF HAZARD FREQUENCY / COUNTY ### 
 #################################################################################
 
-### Map 1A: total hazard events per county from 1996  - 2022
-#   create a df for total events/county from 1996 - 2022
-map1a = data %>%
-  group_by(County) %>% # could be grouped by County_FIPS if needed by mapping package(s)
-  summarise(event_count = n()) # event count
-#   create a df for total episodes/county from 1996 - 2022
-map1a.2 = data %>%
-  group_by(County) %>% # could be grouped by County_FIPS if needed by mapping package(s)
-  summarise(episode_count = length(unique(EPISODE_ID))) # included this version but assume going with map1a for now
+mirta <- read_sf(paste0(getwd(),'/MIRTA_shapefiles/DoD_Sites___Boundary.shp'))
+ca_mirta <- mirta[mirta$STATENAMEC=='ca',]
+usa <- map_data('usa')
+ca_counties <- counties[counties$STATE=='CA',]
+names(map1a)[1] <- 'COUNTYNAME'
+names(map1a.2)[1] <- 'COUNTYNAME'
+ca_counties <- left_join(ca_counties,map1a,by='COUNTYNAME')
+ca_counties <- left_join(ca_counties,map1a.2,by='COUNTYNAME')
 
+library(RColorBrewer)
+cols <- rev(brewer.pal(11, 'RdYlBu'))
 
-### INSERT SHAR MAPPING CODE FOR MAP 1a ###
+ggplot() + 
+  #geom_polygon(data=usa,mapping=aes(x=long, y=lat, group=group),fill='transparent',color='black') + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  geom_sf(data=ca_counties,mapping=aes(group=event_count,fill=event_count))+
+  scale_fill_gradientn(colours = cols)+
+  #coord_fixed(1.3) +
+  geom_sf(ca_mirta,mapping=aes(),fill='black') +
+  xlim(-124,-114)+ylim(32,42)+
+  theme_bw() +
+  theme(legend.position = 'bottom')
 
+ggplot() + 
+  geom_polygon(data=usa,mapping=aes(x=long, y=lat, group=group),fill='transparent',color='black') + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  geom_sf(data=ca_counties,mapping=aes(group=event_count,fill=episode_count))+
+  scale_fill_gradientn(colours = cols)+
+  #coord_fixed(1.3) +
+  geom_sf(ca_mirta,mapping=aes(),fill='black') +
+  xlim(-124,-114)+ylim(32,42)+
+  theme_bw() +
+  theme(legend.position = 'bottom')
 
 ### Map 1B: total [specific hazard] events per county from 1996 - 2022
 map1b = data %>%
@@ -505,6 +527,21 @@ map1b = data %>%
   summarise(wildfire_count = n())
 
 ### INSERT SHAR MAPPING CODE FOR MAP 1b ###
+names(map1b)[1] <- 'COUNTYNAME'
+ca_counties <- left_join(ca_counties,map1b,by='COUNTYNAME')
+
+cols <- brewer.pal(9, 'YlOrRd')
+ggplot() + 
+  #geom_polygon(data=usa,mapping=aes(x=long, y=lat, group=group),fill='transparent',color='black') + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  geom_sf(data=ca_counties,mapping=aes(group=event_count,fill=wildfire_count))+
+  scale_fill_gradientn(colours = cols)+
+  #coord_fixed(1.3) +
+  geom_sf(ca_mirta,mapping=aes(),fill='black') +
+  xlim(-124,-114)+ylim(32,42)+
+  theme_bw() +
+  theme(legend.position = 'bottom')
 
 
 ### INSERT BETH CODE ON HAZARD DAYS ###
