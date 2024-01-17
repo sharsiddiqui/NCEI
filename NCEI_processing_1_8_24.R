@@ -513,6 +513,17 @@ is.grouped_df(df_dates) # true
 #df_dates = as_tibble(df_dates)
 str(df_dates)
 
+### Binary indicators for hazards per day per county
+# For df_dates long format
+# create binary variables for hazard type occurrence/date
+# for each row (already organized by date and county), 
+# binary hazard = 1 if 'Hazard' = ""..., 0 if else
+for(i in unique(df_dates$EVENT_TYPE)) {
+  df_dates[[paste0("event_",i)]] <- ifelse(df_dates$EVENT_TYPE==i,1,0) # note: may not be necessary given pivor_wider below
+}
+# now, 72 variables with binary haz event indicators by date
+
+
 # Pivot wider so that binary indicators for each hazard by date and county
 # one row per date per county
 df_wider = df_dates %>% 
@@ -570,7 +581,21 @@ multi_hazard_days_per_year %>%
   theme_minimal() + 
   facet_wrap(~County)  
   
+### Binary indicators for hazards per day per county
+# For df_dates long format
+# create binary variables for hazard type occurrence/date
+# for each row (already organized by date and county), 
+# binary hazard = 1 if 'Hazard' = ""..., 0 if else
+for(i in unique(df_dates$EVENT_TYPE)) {
+  df_dates[[paste0("event_",i)]] <- ifelse(df_dates$EVENT_TYPE==i,1,0)
+}
+# now, 72 variables with binary haz event indicators by date
 
+### OUTSTANDING ###
+### Note: at this point, total losses are presented per day
+# so losses overestimated
+# need to create hazard duration column
+# group by event ID and divide losses by duration for daily loss estimates
 #################################################################################
 ### MAPS OF HAZARD FREQUENCY / COUNTY ### 
 #################################################################################
