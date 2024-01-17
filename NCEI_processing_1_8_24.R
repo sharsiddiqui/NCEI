@@ -474,11 +474,102 @@ table(is.na(data$County_FIPS), data$start_year) # 9037 zones not joined to count
 # "county" named zones also seem to be missing -- possible conflation between zones/counties for these
 # example: Siskiyou County; various Siskiyou zones
 
+# delete the few rows with mostly NA
+data = data[!is.na(data$EPISODE_ID),] # 50,069 obs in CA
+
+
+
+# delete spaces in EVENT_TYPE names
+data$EVENT_TYPE = gsub(" ", "", data$EVENT_TYPE)
+
+# format dates
+data$start_date = as.Date(data$start_date, tryFormats = "%Y-%m-%d")
+data$end_date = as.Date(data$end_date, tryFormats = "%Y-%m-%d")
 
 #### OUTSTANDING ####
-# group EVENT_TYPES 
+# group EVENT_TYPES for those that are very similar
 # example: extreme cold/wind chill + cold/wind chill = cold/wind chill
 table(data$EVENT_TYPE)
+
+################################################################################
+### ORGANIZING BY HAZARD DAY ###
+################################################################################
+
+# Create rows for each event duration, one row per day of hazard
+# so there will be multiple rows associated with the same event
+# not to be used for losses - just for event occurrences
+df_dates = data %>% 
+  group_by(EVENT_ID, County) %>% 
+  tidyr::nest() %>% 
+  mutate(
+    Date = purrr::map(
+      data, ~ seq(.x$start_date, .x$end_date, by = "1 day")
+    )) %>% 
+  tidyr::unnest(c(data, Date))
+# 212,182 obs of 32 variables 
+# delete duplicate rows
+df_dates = unique(df_dates)
+is.grouped_df(df_dates) # true
+#df_dates = as_tibble(df_dates)
+str(df_dates)
+
+# Pivot wider so that binary indicators for each hazard by date and county
+# one row per date per county
+df_wider = df_dates %>% 
+  pivot_wider(id_cols = c(County, Date, start_month, start_year), 
+              names_from = EVENT_TYPE, values_from = c(EVENT_TYPE), 
+              values_fill = 0,
+              values_fn = function(x) 1)
+
+# count of hazard sum for date per county
+df_wider$event_sum <- rowSums(df_wider[ , c(5:44)], na.rm=TRUE) # column indices subject to change
+table(df_wider$event_sum)
+# 74,948 obs
+#     1     2     3     4     5     6     7     8 
+# 60819 11445  2029   492   130    29     3     1 
+
+# create variable for multi-hazard event -- same day
+df_wider$multi_hazard_day = ifelse(df_wider$event_sum > 1, 1, 0)
+table(df_wider$multi_hazard_day) # 14,129 multihazards
+
+# count of multi hazard days per year
+multi_hazard_days_per_year = df_wider %>%
+  group_by(County, start_year) %>%
+  summarise(haz_days_per_year = n(), 
+            multi_haz_days_per_year = sum(multi_hazard_day)) %>%
+  mutate(perc_multi_haz_days_per_year = (multi_haz_days_per_year/haz_days_per_year)) %>%
+  na.omit(County) 
+# 1382 obs of 5 variables
+
+# multi hazard days per year per county
+multi_hazard_days_per_year %>%
+  group_by(County, start_year) %>%
+  filter(County == "Lassen" | County == "Orange" | County == "San Bernardino" | County == "Monterey") %>%
+  ggplot(aes(x = start_year, y = multi_haz_days_per_year)) + 
+  geom_bar(stat="identity") + 
+  labs(x = "Year", y = "Multi-Hazard Days Per Calendar Year") + 
+  theme_minimal() + 
+  facet_wrap(~County)
+# total hazard days per year per county
+multi_hazard_days_per_year %>%
+  group_by(County, start_year) %>%
+  filter(County == "Lassen" | County == "Orange" | County == "San Bernardino" | County == "Monterey") %>%
+  ggplot(aes(x = start_year, y = multi_haz_days_per_year)) + 
+  geom_bar(stat="identity") + 
+  labs(x = "Year", y = "Multi-Hazard Days Per Calendar Year") + 
+  theme_minimal() + 
+  facet_wrap(~County)
+
+# barplot of county percentage multi hazard days out of total haz days per year
+multi_hazard_days_per_year %>%
+  group_by(County, start_year) %>%
+  filter(County == "Lassen" | County == "Orange" | County == "San Bernardino" | County == "Monterey") %>%
+  ggplot(aes(x = start_year, y = perc_multi_haz_days_per_year)) + 
+  geom_bar(stat="identity") + 
+  labs(x = "Year", y = "Percent of Multi- Out of Total Hazard Days Per Calendar Year") + 
+  theme_minimal() + 
+  facet_wrap(~County)  
+  
 
 #################################################################################
 ### MAPS OF HAZARD FREQUENCY / COUNTY ### 
