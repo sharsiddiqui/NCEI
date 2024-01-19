@@ -1,0 +1,28 @@
+library(lubridate)
+library(tidyverse)
+library(readxl)
+
+df <- read_csv("NCEI_CA_1_8_24_clean_loss.csv")
+data <- read_excel("USACE_Flood_Damages.xlsx", 
+                                  skip = 1)
+###Putting the data in long format rather then wide to line up with CPI data set
+data_long <- data%>%
+  pivot_longer(!Location, names_to = "Year", values_to = "Damages")
+data_long <- data_long%>%
+  mutate(Year = as.double(Year))
+
+###converting to be in thousands 
+data_long <- data_long%>%
+  mutate(damage_thousand = Damages*1e3)
+
+### PROCESSING OF DAMAGE ESTIMATES ###
+
+## Consumer Price Index CPI data (accessed from GIT repository)
+cpi <- read_excel("CPI_1996_2022_BLS.xlsx", skip = 10)
+
+## adjust to 2022 inflation
+## inflation formula: val_22 = val_y(CPI_22/CPI_y)
+data_inflation <- left_join(data_long,cpi %>% select('Year','Annual'),by='Year')
+colnames(data_inflation)[which(names(data_inflation) == "Annual")] <- "CPI_y"
+
+data_inflation$damage_adj2022 <- data_inflation$damage_thousand * (292.655/data_inflation$CPI_y) 
